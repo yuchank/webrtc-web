@@ -15,15 +15,30 @@ io.sockets.on('connection', function (socket) {
 
   // convenience function to log server message on the client
   function log() {
-
+    var array = ['Message from server:'];
+    // merging two arrays
+    array.push.apply(array, arguments);
+    socket.emit('log', array);
   }
 
   socket.on('message', function (message) {
     socket.broadcast.emit('message', message);
   });
 
-  socket.on('create on join', function (room) {
+  socket.on('create or join', function (room) {
+    log(`Received request to create or join room ${room}`);
 
+    var clientsInRoom = io.sockets.adapter.rooms[room];
+    // object key value
+    var numClients = clientsInRoom ? Object.keys(clientsInRoom.sockets).length : 0;
+
+    log(`Room ${room} now has ${numClients} client(s)`);
+
+    if (numClients === 0) {
+      socket.join(room);
+      log(`Client ID ${socket.id} created room ${room}`);
+      socket.emit('created', room, socket.id);
+    }
   });
 
   socket.on('ipaddr', function () {
