@@ -5,7 +5,18 @@
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-  <h1>Realtime communication with WebRTC</h1>
+  <h1>WebRTC</h1>
+  
+  <video id="localVideo" autoplay playsinline></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <div>
+    <button id="startButton">Start</button>
+    <button id="callButton">Call</button>
+    <button id="hangupButton">Hang Up</button>
+  </div>
+
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/main.js"></script>
 </body>
