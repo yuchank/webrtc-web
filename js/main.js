@@ -1,5 +1,43 @@
 'use strict';
 
+var sendChannel;
+var receiveChannel;
+
+var pcConstraint;
+var dataConstraint;
+
+// Define and add behavior to buttons.
+
+// Define action buttons.
+const startButton = document.querySelector('button#startButton');
+const callButton = document.querySelector('button#callButton');
+const sendButton = document.querySelector('button#sendButton');
+const closeButton = document.querySelector('button#closeButton');
+const hangupButton = document.querySelector('button#hangupButton');
+
+const dataChannelSend = document.querySelector('textarea#dataChannelSend');
+const dataChannelReceive = document.querySelector('textarea#dataChannelReceive');
+
+// Add click event handlers for buttons.
+startButton.addEventListener('click', createConnection);
+callButton.addEventListener('click', callAction);
+sendButton.addEventListener('click', sendData);
+closeButton.addEventListener('click', closeDataChannels);
+hangupButton.addEventListener('click', hangupAction);
+
+// Set up initial action buttons status: disable call and hangup.
+function enableStartButton() {
+  startButton.disabled = false;
+}
+
+function disableSendButton() {
+  sendButton.disabled = true;
+}
+
+callButton.disabled = true;
+hangupButton.disabled = true;
+
+
 // Set up media stream constant and parameters.
 
 // You will be streaming video only: "video: true".
@@ -165,22 +203,21 @@ function createdAnswer(description) {
 
 }
 
-// Define and add behavior to buttons.
-
-// Define action buttons.
-const startButton = document.getElementById('startButton');
-const callButton = document.getElementById('callButton');
-const hangupButton = document.getElementById('hangupButton');
-
-// Set up initial action buttons status: disable call and hangup.
-callButton.disabled = true;
-hangupButton.disabled = true;
-
 // Handles start button action: creates local Media Stream
-function startAction() {
+function createConnection() {
+  dataChannelSend.placeholder = '';
+
   startButton.disabled = true;
   navigator.mediaDevices.getUserMedia(mediaStreamConstraints).then(gotLocalMediaStream).catch(handleLocalMediaStreamError);
   trace('Requesting local stream.');
+}
+
+function sendData() {
+
+}
+
+function closeDataChannels() {
+
 }
 
 // Handles call button action: creates peer connection.
@@ -203,19 +240,33 @@ function callAction() {
 
   const servers = null;   // Allows for RTC server configuration.
 
+  pcConstraint = null;
+  dataConstraint = null;
+  trace('Using SCTP based data channels');
+  // For SCTP, reliable and ordered delivery is true by default.
+  // Add localConnection to global scope to make it visible from the browser console.
   // Create peer connections and add behavior.
-  localPeerConnection = new RTCPeerConnection(servers);
+  window.localConnection = localPeerConnection = new RTCPeerConnection(servers, pcConstraint);
   trace('Created local peer connection object localPeerConnection');
+
+  sendChannel = localPeerConnection.createDataChannel('sendDataChannel', dataConstraint);
+  trace('Created send data channel');
 
   localPeerConnection.addEventListener('icecandidate', handleConnection);
   localPeerConnection.addEventListener('iceconnectionstatechange', handleConnectionChange);
 
-  remotePeerConnection = new RTCPeerConnection(servers);
+  sendChannel.addEventListener('open', onSendChannelStateChange);
+  sendChannel.addEventListener('close', onSendChannelStateChange);
+
+  // Add remoteConnection to global scope to make it visible from the browser console.
+  window.remoteConnection = remotePeerConnection = new RTCPeerConnection(servers, pcConstraint);
   trace('Created remote peer connection object remotePeerConnection');
 
   remotePeerConnection.addEventListener('icecandidate', handleConnection);
   remotePeerConnection.addEventListener('iceconnectionstatechange', handleConnectionChange);
   remotePeerConnection.addEventListener('addstream', gotRemoteMediaStream);
+
+  remotePeerConnection.addEventListener('datachannel', receiveChannelCallback);
 
   // Add local stream to connection and create offer to connect.
   localPeerConnection.addStream(localStream);
@@ -227,13 +278,14 @@ function callAction() {
 
 // Handles hangup action: ends up call, closes connections and resets peers.
 function hangupAction() {
-
+  localPeerConnection.close();
+  remotePeerConnection.close();
+  localPeerConnection = null;
+  remotePeerConnection = null;
+  hangupButton.disabled = true;
+  callButton.disabled = false;
+  trace('Ending call.');
 }
-
-// Add click event handlers for buttons.
-startButton.addEventListener('click', startAction);
-callButton.addEventListener('click', callAction);
-hangupButton.addEventListener('click', hangupAction);
 
 // Define helper functions.
 
